@@ -2,6 +2,19 @@
 name = "mdbook-nix-repl"
 version = "0.1.0"
 edition = "2024"
+authors = ["T. Sawyer saylesss88@github.com"]
+license = "Apache-2.0"
+description = "An mdBook preprocessor to provide nix-repl functionality within mdbook"
+repository = "https://github.com/saylesss88/mdbook-nix-repl"
+readme = "README.md"
+keywords = ["mdbook", "nix", "repl", "preprocessor"]
+categories = [
+	"command-line-utilities",
+	"development-tools::build-utils",
+	"web-programming",
+]
+homepage = "https://github.com/saylesss88/mdbook-nix-repl"
+exclude = [".github/*", ".gitignore", "book/*"]
 
 [dependencies]
 mdbook-preprocessor = "0.5.1"
