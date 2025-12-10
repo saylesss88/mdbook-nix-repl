@@ -7,13 +7,13 @@ This preprocessor lets you write fenced blocks like:
 ````
 ```nix repl
 1 + 1
+```
 ````
 
-````
+In the rendered book you get a “Run” button that sends the code to a Nix
+evaluation service and shows the result inline.
 
-In the rendered book you get a “Run” button that sends the code to a Nix evaluation service and shows the result inline.
-
-***
+---
 
 ## Installation
 
@@ -21,7 +21,7 @@ Add `mdbook-nix-repl` to your toolchain, for example with Cargo:
 
 ```bash
 cargo install mdbook-nix-repl
-````
+```
 
 Then enable it in your `book.toml`:
 
@@ -251,6 +251,16 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+Run the example backend on a machine with nix and Python 3 installed (NixOS or
+any system with the Nix package manager).
+
+I personally tested in a NixOS VM, clone your book inside the VM, run the server
+in the VM, run `mdbook serve` in the VM, go to `https://localhost:3000` find
+your `nix repl` code block, and click `Run`.
+
+Point `window.NIX_REPL_ENDPOINT` (i.e., the small snippet you add to
+`index.hbs`) at that machine’s HTTP endpoint.
 
 Run it:
 
