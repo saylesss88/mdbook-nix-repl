@@ -1,0 +1,44 @@
+use anyhow::Result;
+use env_logger;
+use mdbook_preprocessor::PreprocessorContext;
+use mdbook_preprocessor::book::Book;
+use mdbook_preprocessor::{Preprocessor, parse_input};
+use std::env;
+use std::io;
+
+use mdbook_nix_repl::NixRepl;
+
+fn main() -> Result<()> {
+    env_logger::init();
+
+    let mut args = env::args();
+    let _bin = args.next();
+
+    if let Some(sub) = args.next() {
+        if sub == "supports" {
+            if let Some(renderer) = args.next() {
+                let pre = NixRepl;
+                let supported = pre.supports_renderer(&renderer).unwrap_or(false);
+                if supported {
+                    println!("true");
+                    std::process::exit(0);
+                } else {
+                    println!("false");
+                    std::process::exit(1);
+                }
+            } else {
+                println!("false");
+                std::process::exit(1);
+            }
+        }
+    }
+
+    let (ctx, book): (PreprocessorContext, Book) = parse_input(io::stdin())?;
+
+    let pre = NixRepl;
+    let processed = pre.run(&ctx, book)?;
+
+    serde_json::to_writer(io::stdout(), &processed)?;
+
+    Ok(())
+}

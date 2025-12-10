@@ -1,0 +1,100 @@
+use mdbook_preprocessor::book::{Book, BookItem};
+use mdbook_preprocessor::errors::Error;
+use mdbook_preprocessor::{Preprocessor, PreprocessorContext};
+
+pub struct NixRepl;
+
+impl Preprocessor for NixRepl {
+    fn name(&self) -> &str {
+        "nix-repl"
+    }
+
+    fn run(&self, _ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
+        book.for_each_mut(|item| {
+            if let BookItem::Chapter(ref mut ch) = *item {
+                ch.content = rewrite_chapter(&ch.content);
+            }
+        });
+        Ok(book)
+    }
+
+    fn supports_renderer(&self, renderer: &str) -> Result<bool, Error> {
+        Ok(renderer == "html")
+    }
+}
+
+fn rewrite_chapter(input: &str) -> String {
+    eprintln!("nix-repl chapter begin");
+    let out = rewrite_fenced_nix_repl_blocks(input);
+    eprintln!("nix-repl chapter end");
+    out
+}
+
+fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
+    let mut out = String::new();
+    let mut in_block = false;
+    let mut buf = String::new();
+
+    for line in input.lines() {
+        let trimmed = line.trim_start();
+        eprintln!("nix-repl line: {:?}", trimmed);
+
+        if !in_block {
+            // Start of ```
+            if trimmed.starts_with("```nix repl") {
+                eprintln!("nix-repl: start block");
+                in_block = true;
+                buf.clear();
+            } else {
+                out.push_str(line);
+                out.push('\n');
+            }
+        } else if trimmed.starts_with("```") {
+            eprintln!("nix-repl: end block, buf = {:?}", buf);
+            out.push_str(&render_nix_repl_html(&buf));
+            in_block = false;
+        } else {
+            buf.push_str(line);
+            buf.push('\n');
+        }
+    }
+
+    if in_block {
+        out.push_str(&buf);
+    }
+
+    out
+}
+
+fn render_nix_repl_html(code: &str) -> String {
+    let escaped = html_escape::encode_text(code);
+
+    let mut html = String::new();
+    html.push_str("<div class=\"nix-repl-block\">\n");
+    html.push_str("  <div class=\"nix-repl-editor\">\n");
+    html.push_str("    <pre><code class=\"language-nix\">");
+    html.push_str(&escaped);
+    html.push_str("</code></pre>\n");
+    html.push_str("  </div>\n");
+    html.push_str("  <div class=\"nix-repl-controls\">\n");
+    html.push_str("    <button class=\"nix-repl-run\">Run</button>\n");
+    html.push_str("    <span class=\"nix-repl-status\"></span>\n");
+    html.push_str("  </div>\n");
+    html.push_str("  <pre class=\"nix-repl-output\"></pre>\n");
+    html.push_str("</div>\n");
+
+    html
+}
+// fn render_nix_repl_html(code: &str) -> String {
+//     let escaped = html_escape::encode_text(code);
+
+//     let mut html = String::new();
+//     html.push_str("<div class=\"nix-repl-block\" data-test=\"nix-repl\">\n");
+//     html.push_str("  <p>HELLO FROM NIX REPL PREPROCESSOR</p>\n");
+//     html.push_str("  <pre><code class=\"language-nix\">");
+//     html.push_str(&escaped);
+//     html.push_str("</code></pre>\n");
+//     html.push_str("</div>\n");
+
+//     html
+// }
