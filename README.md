@@ -147,6 +147,7 @@ In your `theme/index.hbs`, inject the endpoint and include the extra JS:
 ```xml
     {{!-- ...rest of template... --}}
 
+ {{!-- mdbook-nix-repl backend endpoint --}}
     <script>
       window.NIX_REPL_ENDPOINT = "http://127.0.0.1:8080/";
     </script>
@@ -158,6 +159,17 @@ In your `theme/index.hbs`, inject the endpoint and include the extra JS:
     {{/if}}
   </body>
 </html>
+```
+
+More of the file is shown above for context, to be clear, all you need to add to
+`index.hbs` is:
+
+```xml
+{{!-- mdbook-nix-repl backend endpoint --}}
+<script>
+  window.NIX_REPL_ENDPOINT = "http://127.0.0.1:8080/";
+</script>
+
 ```
 
 ---
