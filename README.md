@@ -2,6 +2,8 @@
 
 Interactive Nix REPL–style code blocks for mdBook.
 
+![mdbook-repl](https://raw.githubusercontent.com/saylesss88/mdbook-nix-repl/main/assets/mdbook-nix-repl1.png)
+
 This preprocessor lets you write fenced blocks like:
 
 ````
