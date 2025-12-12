@@ -15,6 +15,18 @@ evaluation service and shows the result inline.
 
 ---
 
+## Quick start (local)
+
+1. `cargo install mdbook-nix-repl`
+
+2. Configure `book.toml` and `index.hbs` as below
+
+3. Run the container backend (optional but recommended)
+
+4. `mdbook serve` and click “Run” on a ` ```nix-repl``` ` code block.
+
+---
+
 ## Installation
 
 Add `mdbook-nix-repl` to your toolchain, for example with Cargo:
@@ -148,33 +160,97 @@ In your `theme/index.hbs`, inject the endpoint and include the extra JS:
 
 ---
 
-## Example backend: local Nix eval server (Python)
+## Containerized backend (Podman/Docker)
 
-This project does not ship a mandatory backend; you can plug in any HTTP service
-that matches the simple JSON protocol:
+For a more isolated setup, the Nix eval server can run inside a container
+instead of directly on the host. This works well on immutable hosts like Fedora
+SecureBlue and Silverblue, and keeps Nix eval isolated inside the container.​
 
-- Request: POST NIX_REPL_ENDPOINT with JSON body:
+**Image contents**
 
-```json
-{ "code": "1 + 1" }
+The container:
+
+- Is based on `debian:stable-slim`.
+
+- Installs `curl`, `ca-certificates`, `python3`, and `xz-utils`.
+
+- Creates a non-root user `nixuser` with a writable `/nix` directory.
+
+- Installs Nix in single-user mode for `nixuser`.
+
+- Enables `nix-command` and flakes via `~/.config/nix/nix.conf`.
+
+- Copies `server.py` into `/app/server.py` and runs it on port 8080.
+
+1. Clone [mdbook-nix-repl](https://github.com/saylesss88/mdbook-nix-repl) and
+   move to it.
+
+```bash
+git clone https://github.com/saylesss88/mdbook-nix-repl.git
+
+cd mdbook-nix-repl/server
 ```
 
-- Response on success:
+2. Make `server.py` executable (see below to inspect the file):
 
-```json
-{ "stdout": "2\n" }
+```bash
+chmod + x server.py
 ```
 
-- Response on error:
+3. `podman build -t nix-repl-service .`
 
-```json
-{ "error": "some error message" }
+4. `podman run --rm -p 127.0.0.1:8080:8080 nix-repl-service`
+
+Then configure `window.NIX_REPL_ENDPOINT = "http://127.0.0.1:8080/";` in your
+`index.hbs` as shown above.
+
+If the above server is running, `mdbook-nix-repl` will work on a machine without
+nix or NixOS installed, either by running `mdbook serve` or `mdbook build`.
+
+Just find the `nix-repl` code block and click `Run`.
+
+See the following to inspect the `Dockerfile` and `server.py`:
+
+<details>
+<summary> ✔️ Dockerfile </summary>
+
+```text
+FROM debian:stable-slim
+
+RUN apt-get update && \
+    apt-get install -y curl ca-certificates python3 xz-utils && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create the user and the /nix directory as root
+RUN useradd -m nixuser
+RUN mkdir -m 0755 /nix && chown nixuser /nix
+
+USER nixuser
+ENV USER=nixuser
+ENV NIX_INSTALLER_NO_MODIFY_PROFILE=1
+
+RUN curl -L https://nixos.org/nix/install -o /tmp/install-nix.sh \
+ && sh /tmp/install-nix.sh --no-daemon \
+ && rm /tmp/install-nix.sh
+
+# Enable nix-command and flakes for this user
+RUN mkdir -p /home/nixuser/.config/nix && \
+    echo 'experimental-features = nix-command flakes' > /home/nixuser/.config/nix/nix.conf
+
+ENV NIX_PATH=/home/nixuser/.nix-profile/etc/nix
+ENV PATH=/home/nixuser/.nix-profile/bin:$PATH
+
+WORKDIR /app
+COPY server.py /app/server.py
+
+EXPOSE 8080
+CMD ["python3", "/app/server.py"]
 ```
 
-For local development, you can run a tiny Python server on a NixOS machine (or
-any system with nix and Python 3 installed):
+</details>
 
-`server.py`:
+<details>
+<summary> ✔️ server.py </summary>
 
 ```py
 #!/usr/bin/env python3
@@ -250,36 +326,45 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 ```
 
-Run the example backend on a machine with nix and Python 3 installed (NixOS or
-any system with the Nix package manager).
+</details>
 
-I personally tested in a NixOS VM, clone your book inside the VM, run the server
-in the VM, run `mdbook serve` in the VM, go to `https://localhost:3000` find
-your `nix repl` code block, and click `Run`.
+---
+
+This project does not ship a mandatory backend; you can plug in any HTTP service
+that matches the simple JSON protocol:
+
+- Request: POST NIX_REPL_ENDPOINT with JSON body:
+
+```json
+{ "code": "1 + 1" }
+```
+
+- Response on success:
+
+```json
+{ "stdout": "2\n" }
+```
+
+- Response on error:
+
+```json
+{ "error": "some error message" }
+```
 
 Point `window.NIX_REPL_ENDPOINT` (i.e., the small snippet you add to
 `index.hbs`) at that machine’s HTTP endpoint.
 
-Run it:
-
-```bash
-chmod +x server.py
-python3 server.py
-```
-
-Then in another terminal:
-
-```bash
-mdbook serve
-```
-
-Visit your book, press "Run" on a `nix repl`
-
 > Security note: this server executes arbitrary Nix expressions. It is intended
 > for local development on trusted machines. Do not expose it to untrusted
 > networks without additional sandboxing, authentication, and resource limits.
+
+Running the backend inside a rootless Podman or Docker container on localhost
+improves isolation compared to a bare Python server, but it should still not be
+exposed to untrusted networks without additional sandboxing, authentication, and
+resource limits.
 
 ---
 
