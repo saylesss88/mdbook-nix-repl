@@ -78,6 +78,9 @@ evaluation service and shows the result inline.
     mdbook serve
     ```
 
+> NOTE: As long as the backend is running, the `Run` command will work with both
+> `mdbook serve` and `mdbook build`
+
 ---
 
 ## Usage in Markdown
