@@ -24,9 +24,7 @@ impl Preprocessor for NixRepl {
 }
 
 fn rewrite_chapter(input: &str) -> String {
-    eprintln!("nix-repl chapter begin");
     let out = rewrite_fenced_nix_repl_blocks(input);
-    eprintln!("nix-repl chapter end");
     out
 }
 
@@ -37,7 +35,7 @@ fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
 
     for line in input.lines() {
         let trimmed = line.trim_start();
-        eprintln!("nix-repl line: {:?}", trimmed);
+        // eprintln!("nix-repl line: {:?}", trimmed);
 
         if !in_block {
             // Start of ```
@@ -50,7 +48,7 @@ fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
                 out.push('\n');
             }
         } else if trimmed.starts_with("```") {
-            eprintln!("nix-repl: end block, buf = {:?}", buf);
+            // eprintln!("nix-repl: end block, buf = {:?}", buf);
             out.push_str(&render_nix_repl_html(&buf));
             in_block = false;
         } else {

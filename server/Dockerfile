@@ -24,7 +24,7 @@ ENV NIX_PATH=/home/nixuser/.nix-profile/etc/nix
 ENV PATH=/home/nixuser/.nix-profile/bin:$PATH
 
 WORKDIR /app
-COPY server.py /app/server.py
+COPY --chown=nixuser:nixuser server.py /app/server.py
 
 EXPOSE 8080
 CMD ["python3", "/app/server.py"]

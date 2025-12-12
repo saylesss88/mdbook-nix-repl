@@ -1,49 +1,148 @@
-use anyhow::Result;
-use mdbook_preprocessor::PreprocessorContext;
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
 use mdbook_preprocessor::book::Book;
-use mdbook_preprocessor::book::BookItem;
-use mdbook_preprocessor::{Preprocessor, parse_input};
-use std::env;
+use mdbook_preprocessor::{Preprocessor, PreprocessorContext, parse_input};
+use std::fs;
 use std::io;
+use std::path::Path;
 
+// Embed the assets directly into the binary at compile time
 use mdbook_nix_repl::NixRepl;
+
+const JS_CONTENT: &str = include_str!("../theme/nix_http.js"); // Ensure this file exists in your src/theme/ or adjust path
+const SERVER_PY: &str = include_str!("../server/server.py"); // Adjust path to your server.py
+const DOCKERFILE: &str = include_str!("../server/Dockerfile"); // Adjust path to your Dockerfile
+
+#[derive(Parser)]
+#[command(name = "mdbook-nix-repl")]
+#[command(about = "A mdbook preprocessor for interactive Nix REPL blocks")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Check if renderer is supported (used by mdbook)
+    Supports { renderer: String },
+
+    /// Initialize config, themes, and backend files in the current directory
+    Init {
+        /// Automatically detect OS to suggest the best backend setup
+        #[arg(long)]
+        auto: bool,
+    },
+}
 
 fn main() -> Result<()> {
     env_logger::init();
+    let cli = Cli::parse();
 
-    let mut args = env::args();
-    let _bin = args.next();
+    match cli.command {
+        // 1. mdbook-nix-repl init
+        Some(Commands::Init { auto }) => handle_init(auto),
 
-    if let Some(sub) = args.next()
-        && sub == "supports"
-    {
-        if let Some(renderer) = args.next() {
-            let pre = NixRepl;
-            let supported = pre.supports_renderer(&renderer).unwrap_or(false);
+        // 2. mdbook-nix-repl supports <renderer>
+        Some(Commands::Supports { renderer }) => {
+            let supported = NixRepl.supports_renderer(&renderer).unwrap_or(false);
             if supported {
-                println!("true");
+                println!("true"); // mdbook expects 0 exit code on success, but boolean string helps debug
                 std::process::exit(0);
             } else {
-                println!("false");
                 std::process::exit(1);
             }
-        } else {
-            println!("false");
-            std::process::exit(1);
         }
+
+        // 3. mdbook-nix-repl (no args) -> Run preprocessor
+        None => run_preprocessor(),
     }
-    eprintln!("nix-repl main: running on full book");
+}
+
+fn run_preprocessor() -> Result<()> {
     let (ctx, book): (PreprocessorContext, Book) = parse_input(io::stdin())?;
 
     let pre = NixRepl;
     let processed = pre.run(&ctx, book)?;
-    // Debug: dump all chapter contents
-    for (idx, item) in processed.items.iter().enumerate() {
-        if let BookItem::Chapter(ch) = item {
-            eprintln!("nix-repl processed chapter {idx}:\n{}", ch.content);
+
+    serde_json::to_writer(io::stdout(), &processed)?;
+    Ok(())
+}
+
+fn handle_init(auto: bool) -> Result<()> {
+    println!("📦 Initializing mdbook-nix-repl...");
+
+    // 1. Create/Write Theme Files
+    let theme_dir = Path::new("theme");
+    if !theme_dir.exists() {
+        fs::create_dir(theme_dir).context("Failed to create theme directory")?;
+    }
+
+    let js_path = theme_dir.join("nix_http.js");
+    fs::write(&js_path, JS_CONTENT).context("Failed to write nix_http.js")?;
+    println!("✅ Created theme/nix_http.js");
+
+    // 2. Inject into index.hbs (Create if missing)
+    let index_path = theme_dir.join("index.hbs");
+    if !index_path.exists() {
+        // Option A: Warn user
+        println!(
+            "⚠️  theme/index.hbs not found. Please run `mdbook theme` to generate it, then run init again to inject the script."
+        );
+        // Option B: You could write a default index.hbs here if you wanted
+    } else {
+        let content = fs::read_to_string(&index_path)?;
+        if !content.contains("window.NIX_REPL_ENDPOINT") {
+            let snippet = r#"
+<!-- mdbook-nix-repl backend endpoint -->
+<script>
+  window.NIX_REPL_ENDPOINT = "http://127.0.0.1:8080/";
+</script>
+"#;
+            // Inject before the closing body tag
+            let new_content = content.replace("</body>", &format!("{}\n</body>", snippet));
+            fs::write(&index_path, new_content)?;
+            println!("✅ Injected configuration into theme/index.hbs");
+        } else {
+            println!("ℹ️  theme/index.hbs already contains configuration");
         }
     }
-    serde_json::to_writer(io::stdout(), &processed)?;
+
+    // 3. Write Backend Files (so user doesn't need to clone repo)
+    let backend_dir = Path::new("nix-repl-backend");
+    if !backend_dir.exists() {
+        fs::create_dir(backend_dir)?;
+    }
+    fs::write(backend_dir.join("server.py"), SERVER_PY)?;
+    fs::write(backend_dir.join("Dockerfile"), DOCKERFILE)?;
+    println!("✅ Created backend files in ./nix-repl-backend/");
+
+    // 4. Auto-detection logic
+    if auto {
+        detect_os_and_advise();
+    } else {
+        println!("\n🚀 Setup complete. Check ./nix-repl-backend/ for server files.");
+    }
 
     Ok(())
+}
+
+fn detect_os_and_advise() {
+    let is_nixos = if let Ok(content) = fs::read_to_string("/etc/os-release") {
+        content.to_lowercase().contains("id=nixos")
+    } else {
+        false
+    };
+
+    println!("\n🔍 System Detection:");
+    if is_nixos {
+        println!("   🎉 NixOS detected!");
+        println!("   You can run the backend natively without Docker:");
+        println!("   $ cd nix-repl-backend && python3 server.py");
+    } else {
+        println!("   ☁️  Non-NixOS system detected.");
+        println!("   It is recommended to use the Docker backend:");
+        println!("   $ cd nix-repl-backend");
+        println!("   $ podman build -t nix-repl-service .");
+        println!("   $ podman run --rm -p 8080:8080 nix-repl-service");
+    }
 }
