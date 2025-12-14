@@ -141,6 +141,7 @@ fn detect_os_and_advise(token: &str) {
         println!("   $ export NIX_REPL_TOKEN={}", token);
         println!("   $ cd nix-repl-backend && python3 server.py");
         println!("   OR, for added isolation:");
+        println!("   $ cd nix-repl-backend");
         println!("   $ podman build -t nix-repl-service .");
         println!("   $ podman run --rm -p 127.0.0.1:8080:8080 \\");
         println!("       -e NIX_REPL_TOKEN={} \\", token);
