@@ -70,6 +70,9 @@ local Nix evaluation service and shows the result inline.
       localhost/nix-repl-service
     ```
 
+- If `podman build -t nix-repl-service .` fails, try
+  `podman build --no-cache -t nix-repl.service .`
+
 5.  **Serve your book:**
     ```bash
     mdbook serve

@@ -64,7 +64,6 @@ fn handle_init(auto: bool) -> Result<()> {
     println!("📦 Initializing mdbook-nix-repl...");
 
     // Generate a simple local token (timestamp based) to avoid external rand deps
-    // In production, use the `uuid` or `rand` crate for cryptographically secure tokens.
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -81,7 +80,7 @@ fn handle_init(auto: bool) -> Result<()> {
     fs::write(&js_path, JS_CONTENT).context("Failed to write nix_http.js")?;
     println!("✅ Created theme/nix_http.js");
 
-    // 2. Inject Configuration & Footer into index.hbs
+    // 2. Inject Configuration into index.hbs
     let index_path = theme_dir.join("index.hbs");
     if !index_path.exists() {
         println!("⚠️  theme/index.hbs not found. Run `mdbook theme` first.");
@@ -105,29 +104,6 @@ fn handle_init(auto: bool) -> Result<()> {
             new_content = new_content.replace("</body>", &format!("{}\n</body>", snippet));
             modified = true;
             println!("✅ Injected endpoint and auth token into theme/index.hbs");
-        }
-
-        // Inject Footer
-        if !new_content.contains("mdbook-kanagawa-theme") {
-            // Inserts footer before the content closing div usually found in default theme
-            // Fallback to inserting before body end if specific div not found
-            let footer_html = r#"
-            <footer style="text-align: center; margin-top: 50px; font-size: 0.8em; opacity: 0.7;">
-                <p>Made with <a href="https://github.com/yourusername/mdbook-kanagawa-theme">mdbook-kanagawa-theme</a></p>
-            </footer>
-            "#;
-
-            // Try to place it inside the page-wrapper for better styling
-            if new_content.contains("</div>\n    <!-- Unnamed -->") {
-                new_content = new_content.replace(
-                    "</div>\n    <!-- Unnamed -->",
-                    &format!("{}\n</div>\n    <!-- Unnamed -->", footer_html),
-                );
-            } else {
-                new_content = new_content.replace("</body>", &format!("{}\n</body>", footer_html));
-            }
-            modified = true;
-            println!("✅ Injected footer into theme/index.hbs");
         }
 
         if modified {
