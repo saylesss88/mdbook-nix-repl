@@ -24,31 +24,29 @@ impl Preprocessor for NixRepl {
 }
 
 fn rewrite_chapter(input: &str) -> String {
-    let out = rewrite_fenced_nix_repl_blocks(input);
-    out
+    rewrite_fenced_nix_repl_blocks(input)
 }
 
 fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
+    const START: &str = "```nix repl";
+    const END: &str = "```";
+
     let mut out = String::new();
     let mut in_block = false;
     let mut buf = String::new();
 
     for line in input.lines() {
         let trimmed = line.trim_start();
-        // eprintln!("nix-repl line: {:?}", trimmed);
 
         if !in_block {
-            // Start of ```
-            if trimmed.starts_with("```nix repl") {
-                eprintln!("nix-repl: start block");
+            if trimmed.starts_with(START) {
                 in_block = true;
                 buf.clear();
             } else {
                 out.push_str(line);
                 out.push('\n');
             }
-        } else if trimmed.starts_with("```") {
-            // eprintln!("nix-repl: end block, buf = {:?}", buf);
+        } else if trimmed.starts_with(END) {
             out.push_str(&render_nix_repl_html(&buf));
             in_block = false;
         } else {
@@ -80,19 +78,5 @@ fn render_nix_repl_html(code: &str) -> String {
     html.push_str("  </div>\n");
     html.push_str("  <pre class=\"nix-repl-output\"></pre>\n");
     html.push_str("</div>\n");
-
     html
 }
-// fn render_nix_repl_html(code: &str) -> String {
-//     let escaped = html_escape::encode_text(code);
-
-//     let mut html = String::new();
-//     html.push_str("<div class=\"nix-repl-block\" data-test=\"nix-repl\">\n");
-//     html.push_str("  <p>HELLO FROM NIX REPL PREPROCESSOR</p>\n");
-//     html.push_str("  <pre><code class=\"language-nix\">");
-//     html.push_str(&escaped);
-//     html.push_str("</code></pre>\n");
-//     html.push_str("</div>\n");
-
-//     html
-// }

@@ -59,7 +59,6 @@ fn main() -> Result<()> {
 }
 
 fn run_preprocessor() -> Result<()> {
-    eprintln!("nix-repl main: running on full book");
     let (ctx, book): (PreprocessorContext, Book) = parse_input(io::stdin())?;
 
     let pre = NixRepl;

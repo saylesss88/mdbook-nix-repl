@@ -12,8 +12,8 @@ This preprocessor lets you write fenced blocks like:
 ```
 ````
 
-In the rendered book you get a “Run” button that sends the code to a Nix
-evaluation service and shows the result inline.
+In the rendered book you get a “Run” button that sends the code to a secure
+local Nix evaluation service and shows the result inline.
 
 ---
 
@@ -33,21 +33,11 @@ evaluation service and shows the result inline.
 
     # Initialize the plugin files and backend
     mdbook-nix-repl init --auto
-    📦 Initializing mdbook-nix-repl...
-    ✅ Created theme/nix_http.js
-    ✅ Injected configuration into theme/index.hbs
-    ✅ Created backend files in ./nix-repl-backend/
-
-    🔍 System Detection:
-    ☁️  Non-NixOS system detected.
-    It is recommended to use the Docker backend:
-    $ cd nix-repl-backend
-    $ podman build -t nix-repl-service .
-    $ podman run --rm -p 8080:8080 nix-repl-service
     ```
 
-    _This command automatically creates the `theme/` files, injects the
-    necessary script into `index.hbs`, and generates the backend server files._
+    _This command automatically creates the `theme/` files, generates a unique
+    authentication token, injects the necessary scripts into `index.hbs`, and
+    creates the backend server files._
 
 3.  **Enable the plugin:** Add this to your `book.toml`:
 
@@ -59,27 +49,31 @@ evaluation service and shows the result inline.
     additional-js = ["theme/nix_http.js"]
     ```
 
-4.  **Run the backend:** Open a separate terminal and run the server generated
-    in step 2:
+4.  **Run the backend:** The `init` command output provided the token you need.
+    Open a separate terminal and run the server using that token:
 
     ```bash
-    # For Docker/Podman users (Recommended for non-NixOS):
+    # 1. Get your token from theme/index.hbs if you lost it
+    # Look for window.NIX_REPL_TOKEN = "..."
+
+    # 2. Export it
+    export NIX_REPL_TOKEN=your_token_here
+
+    # 3. Run the service (Container recommended)
     cd nix-repl-backend
     podman build -t nix-repl-service .
-    podman run --rm -p 8080:8080 nix-repl-service
-
-    # OR for native NixOS users:
-    cd nix-repl-backend
-    python3 server.py
+    podman run --rm \
+      -p 127.0.0.1:8080:8080 \
+      -e NIX_REPL_BIND=0.0.0.0 \
+      -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
+      --cap-drop=ALL --security-opt=no-new-privileges \
+      localhost/nix-repl-service
     ```
 
 5.  **Serve your book:**
     ```bash
     mdbook serve
     ```
-
-> NOTE: As long as the backend is running, the `Run` command will work with both
-> `mdbook serve` and `mdbook build`
 
 ---
 
@@ -104,6 +98,27 @@ an output area.
 
 ---
 
+## Security Model
+
+This tool is designed for **local development**. To ensure safety, it implements
+several security layers:
+
+1.  **Authentication:** The browser and server share a randomly generated secret
+    token (`NIX_REPL_TOKEN`). Requests without this token are rejected (403
+    Forbidden).
+
+2.  **Localhost Only:** The server binds strictly to `127.0.0.1` on the host,
+    preventing access from the local network or internet.
+
+3.  **CORS & Origin Locking:** The server rejects requests from non-local
+    origins to prevent CSRF attacks from malicious websites.
+
+4.  **Container Hardening:** The recommended Podman/Docker setup drops all root
+    capabilities (`--cap-drop=ALL`) and prevents privilege escalation
+    (`no-new-privileges`).
+
+---
+
 ## How it Works
 
 The preprocessor only generates HTML; it does not talk to Nix directly. A small
@@ -113,13 +128,13 @@ the result.
 The `init` command sets up the following integration for you:
 
 1.  **Frontend Script:** Creates `theme/nix_http.js` to handle the UI logic.
-
-2.  **Theme Injection:** Injects the backend endpoint configuration into
+2.  **Theme Injection:** Injects the endpoint and auth token into
     `theme/index.hbs`:
 
     ```html
     <script>
       window.NIX_REPL_ENDPOINT = "http://127.0.0.1:8080/";
+      window.NIX_REPL_TOKEN = "a1b2c3d4...";
     </script>
     ```
 
@@ -130,77 +145,53 @@ The `init` command sets up the following integration for you:
 
 ## Backend Setup
 
-The `init --auto` command will detect your OS and suggest the best way to run
-the backend.
+### Option A: Containerized (Recommended)
 
-### Option A: Containerized (Recommended for non-NixOS)
+For a secure, isolated setup, the Nix eval server runs inside a hardened
+container.
 
-For a more isolated setup, the Nix eval server runs inside a container. This
-works well on immutable hosts like Fedora SecureBlue or Silverblue.
-
-The generated `Dockerfile`:
-
-- Uses `debian:stable-slim`
-- Installs Nix in single-user mode
-- Enables `nix-command` and `flakes`
-- Exposes port 8080
-
-**To run:**
+**1. Build the image:**
 
 ```bash
 cd nix-repl-backend
 podman build -t nix-repl-service .
-podman run --rm -p 8080:8080 nix-repl-service
+```
+
+**2. Run securely:**
+
+```bash
+export NIX_REPL_TOKEN=... # From your index.hbs
+podman run --rm \
+  -p 127.0.0.1:8080:8080 \
+  -e NIX_REPL_BIND=0.0.0.0 \
+  -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
+  --cap-drop=ALL --security-opt=no-new-privileges \
+  localhost/nix-repl-service
 ```
 
 ### Option B: Native (NixOS Users)
 
-If you are already on NixOS, you can run the server directly without a
-container.
-
-**To run:**
+If you are on NixOS, you can run the server directly.
 
 ```bash
+export NIX_REPL_TOKEN=... # From your index.hbs
 cd nix-repl-backend
 python3 server.py
 ```
 
+> ⚠️ Security Warning: Running natively is less secure than the container
+> method. While nix eval is sandboxed, running the server directly on your host
+> lacks the resource limits (CPU/RAM) and filesystem isolation provided by the
+> container. A "while true" loop in Nix could freeze your whole system, or a
+> vulnerability in the server could expose user files. Use the container
+> whenever possible.
+
 ---
 
-## JSON Protocol
-
-This project does not ship a mandatory backend; you can plug in any HTTP service
-that matches this simple JSON protocol:
+## Protocol
 
 - **Request:** POST `NIX_REPL_ENDPOINT`
+  - Headers: `X-Nix-Repl-Token: <token>`
+  - Body: `{ "code": "1 + 1" }`
 
-  ```json
-  { "code": "1 + 1" }
-  ```
-
-- **Response (Success):**
-
-  ```json
-  { "stdout": "2\n" }
-  ```
-
-- **Response (Error):**
-  ```json
-  { "error": "some error message" }
-  ```
-
-> **Security Note:** This server executes arbitrary Nix expressions. It is
-> intended for local development on trusted machines. Do not expose it to
-> untrusted networks without additional sandboxing, authentication, and resource
-> limits.
-
----
-
-## Status
-
-This is experimental. The UI and protocol may change. Contributions for:
-
-- Safer backends (e.g. Nix sandboxes, systemd services).
-- Better frontend UX.
-
-are very welcome.
+- **Response:** `{ "stdout": "2\n" }` or `{ "error": "..." }`
