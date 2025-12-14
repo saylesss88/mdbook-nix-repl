@@ -140,6 +140,12 @@ fn detect_os_and_advise(token: &str) {
         println!("   🎉 NixOS detected! Run native backend:");
         println!("   $ export NIX_REPL_TOKEN={}", token);
         println!("   $ cd nix-repl-backend && python3 server.py");
+        println!("   OR, for added isolation:");
+        println!("   $ podman build -t nix-repl-service .");
+        println!("   $ podman run --rm -p 127.0.0.1:8080:8080 \\");
+        println!("       -e NIX_REPL_TOKEN={} \\", token);
+        println!("       --cap-drop=ALL --security-opt=no-new-privileges \\");
+        println!("       nix-repl-service");
     } else {
         println!("   ☁️  Non-NixOS system. Recommended secure Docker command:");
         println!("   $ cd nix-repl-backend");
