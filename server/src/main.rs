@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     extract::{Request, State},
-    http::{HeaderMap, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     middleware::{self, Next},
     response::Response,
 };
@@ -39,25 +39,25 @@ struct ErrorResponse {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Read token from env
-    let token = env::var("NIX_REPL_TOKEN").ok();
-
-    if token.is_none() {
-        eprintln!("⚠️  WARNING: NIX_REPL_TOKEN env var not set. Auth is disabled!");
-    }
+    // Fail closed: require token
+    let token = match env::var("NIX_REPL_TOKEN") {
+        Ok(t) if !t.trim().is_empty() => Some(t),
+        _ => {
+            eprintln!("ERROR: NIX_REPL_TOKEN must be set (refusing to start).");
+            std::process::exit(2);
+        }
+    };
 
     let state = Arc::new(AppState { token });
 
-    // CORS: only allow localhost origins
+    // Strict CORS allowlist (mdbook serve defaults to localhost:3000)
+    let allowed_origins = [
+        HeaderValue::from_static("http://localhost:3000"),
+        HeaderValue::from_static("http://127.0.0.1:3000"),
+    ];
+
     let cors = CorsLayer::new()
-        .allow_origin(tower_http::cors::AllowOrigin::predicate(
-            |origin: &header::HeaderValue, _| {
-                origin
-                    .to_str()
-                    .map(|s| s.contains("localhost") || s.contains("127.0.0.1"))
-                    .unwrap_or(false)
-            },
-        ))
+        .allow_origin(allowed_origins)
         .allow_methods([axum::http::Method::POST, axum::http::Method::OPTIONS])
         .allow_headers([
             header::CONTENT_TYPE,
@@ -75,8 +75,9 @@ async fn main() -> anyhow::Result<()> {
         .layer(tower_http::limit::RequestBodyLimitLayer::new(MAX_BODY_SIZE))
         .with_state(state);
 
-    // Bind address from env or default to 0.0.0.0 (for container use)
-    let bind_addr = env::var("NIX_REPL_BIND").unwrap_or_else(|_| "0.0.0.0".to_string());
+    // Default to localhost for safety (native runs).
+    // For container runs, override with: -e NIX_REPL_BIND=0.0.0.0
+    let bind_addr = env::var("NIX_REPL_BIND").unwrap_or_else(|_| "127.0.0.1".to_string());
     let addr: SocketAddr = format!("{}:8080", bind_addr).parse()?;
 
     println!("🔒 nix-repl secure server (Rust) listening on {}", addr);
@@ -86,7 +87,6 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
 async fn handle_preflight() -> StatusCode {
     StatusCode::NO_CONTENT
 }

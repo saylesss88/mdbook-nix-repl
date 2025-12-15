@@ -66,6 +66,7 @@ local Nix evaluation service and shows the result inline.
 
     podman run --rm \
       -p 127.0.0.1:8080:8080 \
+      -e NIX_REPL_BIND=0.0.0.0 \
       -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
       --cap-drop=ALL --security-opt=no-new-privileges \
       localhost/nix-repl-service
@@ -114,8 +115,10 @@ several security layers:
 2.  **Localhost Only:** The server binds strictly to `127.0.0.1` on the host
     (via port mapping), preventing access from the local network or internet.
 
-3.  **CORS & Origin Locking:** The server rejects requests from non-local
-    origins to prevent CSRF attacks from malicious websites.
+3.  **Strict CORS**. Only exact local origins (for example
+    `http://localhost:3000` and `http://127.0.0.1:3000`) are allowed, rather
+    than substring matches or wildcards, to prevent drive‑by requests from other
+    sites.
 
 4.  **Container Hardening:** The recommended Podman/Docker setup drops all root
     capabilities (`--cap-drop=ALL`) and prevents privilege escalation
@@ -170,6 +173,7 @@ podman build -t nix-repl-service .
 export NIX_REPL_TOKEN=... # From your index.hbs
 podman run --rm \
   -p 127.0.0.1:8080:8080 \
+  -e NIX_REPL_BIND=0.0.0.0 \
   -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
   --cap-drop=ALL --security-opt=no-new-privileges \
   localhost/nix-repl-service
@@ -191,7 +195,6 @@ cargo build --release
 
 ```bash
 export NIX_REPL_TOKEN=... # From your index.hbs
-export NIX_REPL_BIND=127.0.0.1
 ./target/release/nix-repl-server
 ```
 

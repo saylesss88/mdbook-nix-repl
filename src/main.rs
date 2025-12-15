@@ -145,7 +145,9 @@ fn detect_os_and_advise(token: &str) {
     println!("   2. Build the container:");
     println!("      $ podman build -t nix-repl-service .");
     println!("   3. Run the container:");
+    // Added NIX_REPL_BIND=0.0.0.0 so it works inside container, while -p keeps it local-only on host
     println!("      $ podman run --rm -p 127.0.0.1:8080:8080 \\");
+    println!("         -e NIX_REPL_BIND=0.0.0.0 \\");
     println!("         -e NIX_REPL_TOKEN={} \\", token);
     println!("         --cap-drop=ALL --security-opt=no-new-privileges \\");
     println!("         nix-repl-service");
@@ -154,6 +156,7 @@ fn detect_os_and_advise(token: &str) {
         println!("\n   🎉 NixOS detected! You can also run natively:");
         println!("      $ export NIX_REPL_TOKEN={}", token);
         println!("      $ cd nix-repl-backend");
+        // Native run uses the default 127.0.0.1 bind (secure by default)
         println!("      $ cargo run --release");
     } else {
         println!("\n   ℹ️  Non-NixOS: Container recommended for Nix isolation.");
