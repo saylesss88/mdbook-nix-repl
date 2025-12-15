@@ -14,22 +14,15 @@ categories = [
 	"web-programming",
 ]
 homepage = "https://github.com/saylesss88/mdbook-nix-repl"
-exclude = [
-	".github/*",
-	".gitignore",
-	"book/*",
-	"server/target",
-	"server/Cargo.lock",
-]
 include = [
 	"src/**/*",
 	"Cargo.toml",
 	"README.md",
 	"LICENSE",
 	"theme/nix_http.js",
-	"server/src/**/*",
 	"server/Cargo.toml",
 	"server/Dockerfile",
+	"server/src/**/*",
 ]
 
 [dependencies]
