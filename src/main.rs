@@ -11,7 +11,7 @@ use mdbook_nix_repl::NixRepl;
 
 const JS_CONTENT: &str = include_str!("../theme/nix_http.js");
 const SERVER_RUST: &str = include_str!("../server/src/main.rs");
-const SERVER_CARGO_TOML: &str = include_str!("../server/Cargo.toml");
+const SERVER_CARGO_TOML: &str = include_str!("../server/Cargo.toml.inc");
 const DOCKERFILE: &str = include_str!("../server/Dockerfile");
 
 #[derive(Parser)]

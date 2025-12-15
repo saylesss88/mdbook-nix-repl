@@ -20,7 +20,7 @@ include = [
 	"README.md",
 	"LICENSE",
 	"theme/nix_http.js",
-	"server/Cargo.toml",
+	"server/Cargo.toml.inc",
 	"server/Dockerfile",
 	"server/src/**/*",
 ]
