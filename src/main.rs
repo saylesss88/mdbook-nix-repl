@@ -17,6 +17,7 @@ const DOCKERFILE: &str = include_str!("../server/Dockerfile");
 #[derive(Parser)]
 #[command(name = "mdbook-nix-repl")]
 #[command(about = "A mdbook preprocessor for interactive Nix REPL blocks")]
+#[command(version, propagate_version = true)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,

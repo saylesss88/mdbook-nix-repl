@@ -198,11 +198,19 @@ export NIX_REPL_TOKEN=... # From your index.hbs
 ./target/release/nix-repl-server
 ```
 
+By default the server binds to `127.0.0.1:8080` for safer native runs; no bind
+variable is required. To expose beyond loopback (not recommended), set
+`NIX_REPL_BIND=0.0.0.0` before running.
+
 > ⚠️ **Security Warning:** Running natively is less secure than the container
 > method. While `nix eval` is sandboxed, running the server directly on your
 > host lacks the resource limits (CPU/RAM) and filesystem isolation provided by
 > the container. A "while true" loop in Nix could freeze your whole system. Use
 > the container whenever possible.
+
+Running the native server under a separate, minimally privileged user account
+(with limited home access and no sensitive credentials) reduces the impact if
+something goes wrong.
 
 ---
 
