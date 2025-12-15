@@ -5,7 +5,8 @@ import os
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# SECURITY: Only bind to localhost. Never use 0.0.0.0 unless behind a secure proxy.
+# SECURITY: HOST = "0.0.0.0" allows the host to reach the container
+# Port publishing: `-p 127.0.0.1:8080:8080` ensures only the host can connect (not the network)
 # HOST = os.environ.get("NIX_REPL_BIND","127.0.0.1") 
 HOST = "0.0.0.0"
 PORT = 8080

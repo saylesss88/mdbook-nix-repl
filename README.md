@@ -61,10 +61,11 @@ local Nix evaluation service and shows the result inline.
 
     # 3. Run the service (Container recommended)
     cd nix-repl-backend
+
     podman build -t nix-repl-service .
+
     podman run --rm \
       -p 127.0.0.1:8080:8080 \
-      -e NIX_REPL_BIND=0.0.0.0 \
       -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
       --cap-drop=ALL --security-opt=no-new-privileges \
       localhost/nix-repl-service
@@ -110,8 +111,8 @@ several security layers:
     token (`NIX_REPL_TOKEN`). Requests without this token are rejected (403
     Forbidden).
 
-2.  **Localhost Only:** The server binds strictly to `127.0.0.1` on the host,
-    preventing access from the local network or internet.
+2.  **Localhost Only:** The server binds strictly to `127.0.0.1` on the host
+    (via port mapping), preventing access from the local network or internet.
 
 3.  **CORS & Origin Locking:** The server rejects requests from non-local
     origins to prevent CSRF attacks from malicious websites.
@@ -120,9 +121,12 @@ several security layers:
     capabilities (`--cap-drop=ALL`) and prevents privilege escalation
     (`no-new-privileges`).
 
+5.  **Memory & Time Limits:** The server enforces strict 1MB payload limits and
+    5-second execution timeouts to prevent resource exhaustion.
+
 ---
 
-## How it Works
+## How It Works
 
 The preprocessor only generates HTML; it does not talk to Nix directly. A small
 JS helper (`theme/nix_http.js`) sends the code to an HTTP endpoint and displays
@@ -142,7 +146,7 @@ The `init` command sets up the following integration for you:
     ```
 
 3.  **Backend Generation:** Creates a `nix-repl-backend/` directory containing a
-    Python server and Dockerfile.
+    Rust server implementation and a multi-stage Dockerfile.
 
 ---
 
@@ -151,7 +155,7 @@ The `init` command sets up the following integration for you:
 ### Option A: Containerized (Recommended)
 
 For a secure, isolated setup, the Nix eval server runs inside a hardened
-container.
+container. The container build process compiles the Rust server automatically.
 
 **1. Build the image:**
 
@@ -166,7 +170,6 @@ podman build -t nix-repl-service .
 export NIX_REPL_TOKEN=... # From your index.hbs
 podman run --rm \
   -p 127.0.0.1:8080:8080 \
-  -e NIX_REPL_BIND=0.0.0.0 \
   -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
   --cap-drop=ALL --security-opt=no-new-privileges \
   localhost/nix-repl-service
@@ -174,20 +177,29 @@ podman run --rm \
 
 ### Option B: Native (NixOS Users)
 
-If you are on NixOS, you can run the server directly.
+If you are on NixOS or have Nix installed on your host, you can run the server
+directly.
+
+**1. Build the server:**
+
+```bash
+cd nix-repl-backend
+cargo build --release
+```
+
+**2. Run the binary:**
 
 ```bash
 export NIX_REPL_TOKEN=... # From your index.hbs
-cd nix-repl-backend
-python3 server.py
+export NIX_REPL_BIND=127.0.0.1
+./target/release/nix-repl-server
 ```
 
-> ⚠️ Security Warning: Running natively is less secure than the container
-> method. While nix eval is sandboxed, running the server directly on your host
-> lacks the resource limits (CPU/RAM) and filesystem isolation provided by the
-> container. A "while true" loop in Nix could freeze your whole system, or a
-> vulnerability in the server could expose user files. Use the container
-> whenever possible.
+> ⚠️ **Security Warning:** Running natively is less secure than the container
+> method. While `nix eval` is sandboxed, running the server directly on your
+> host lacks the resource limits (CPU/RAM) and filesystem isolation provided by
+> the container. A "while true" loop in Nix could freeze your whole system. Use
+> the container whenever possible.
 
 ---
 

@@ -1,6 +1,6 @@
 [package]
 name = "mdbook-nix-repl"
-version = "0.4.2"
+version = "0.5.2"
 edition = "2024"
 authors = ["T. Sawyer saylesss88@github.com"]
 license = "Apache-2.0"
@@ -14,7 +14,13 @@ categories = [
 	"web-programming",
 ]
 homepage = "https://github.com/saylesss88/mdbook-nix-repl"
-exclude = [".github/*", ".gitignore", "book/*"]
+exclude = [
+	".github/*",
+	".gitignore",
+	"book/*",
+	"server/target",
+	"server/Cargo.lock",
+]
 
 [dependencies]
 mdbook-preprocessor = "0.5.1"
