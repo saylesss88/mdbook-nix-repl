@@ -21,6 +21,16 @@ exclude = [
 	"server/target",
 	"server/Cargo.lock",
 ]
+include = [
+	"src/**/*",
+	"Cargo.toml",
+	"README.md",
+	"LICENSE",
+	"theme/nix_http.js",
+	"server/src/**/*",
+	"server/Cargo.toml",
+	"server/Dockerfile",
+]
 
 [dependencies]
 mdbook-preprocessor = "0.5.1"
