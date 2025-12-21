@@ -28,64 +28,65 @@ local Nix evaluation service and shows the result inline.
 2.  **Initialize your book:** Go to your mdBook directory and run:
 
 If you don't already have a `theme/index.hbs` file (you likely do), create one
-with the following command. ⚠️ Warning: this wipes your `book.toml` and
-`.gitignore` files also, back them up first if necessary.
+with the following command. ⚠️ Warning: `mdbook init --theme` wipes your
+`/theme` directory, `book.toml`, and `.gitignore` files if they exist, back them
+up first if necessary.
 
-    ```bash
-    cp book.toml book.toml.bak
-    mdbook init --theme --force
-    cp book.toml.bak book.toml
-    ```
+```bash
+# Only run this if you don't have a `theme/index.hbs` file
+mdbook init --theme --force
+```
 
-    ```bash
-    # Initialize the plugin files and backend
-    mdbook-nix-repl init --auto
-    ```
+```bash
+# Initialize the plugin files and backend
+mdbook-nix-repl init --auto
+```
 
-    _This command automatically creates the `theme/` files, generates a unique
-    authentication token, injects the necessary scripts into `index.hbs`, and
-    creates the backend server files._
+_This command automatically creates the `theme/` files, generates a unique
+authentication token, injects the necessary scripts into `index.hbs`, and
+creates the backend server files._
 
 3.  **Enable the plugin:** Add this to your `book.toml`:
 
-    ```toml
-    [preprocessor.nix-repl]
-    command = "mdbook-nix-repl"
+```toml
+[preprocessor.nix-repl]
+command = "mdbook-nix-repl"
 
-    [output.html]
-    additional-js = ["theme/nix_http.js"]
-    ```
+[output.html]
+additional-js = ["theme/nix_http.js"]
+```
 
 4.  **Run the backend:** The `init` command output provided the token you need.
     Open a separate terminal and run the server using that token:
 
-    ```bash
-    # 1. Get your token from theme/index.hbs if you lost it
-    # Look for window.NIX_REPL_TOKEN = "..."
+```bash
+# 1. Get your token from theme/index.hbs if you lost it
+# Look for window.NIX_REPL_TOKEN = "..."
 
-    # 2. Export it
-    export NIX_REPL_TOKEN=your_token_here
+# 2. Export it
+export NIX_REPL_TOKEN=your_token_here
 
-    # 3. Run the service (Container recommended)
-    cd nix-repl-backend
+# 3. Run the service (Container recommended)
+cd nix-repl-backend
 
-    podman build -t nix-repl-service .
+podman build -t nix-repl-service .
 
-    podman run --rm \
-      -p 127.0.0.1:8080:8080 \
-      -e NIX_REPL_BIND=0.0.0.0 \
-      -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
-      --cap-drop=ALL --security-opt=no-new-privileges \
-      localhost/nix-repl-service
-    ```
+podman run --rm \
+  -p 127.0.0.1:8080:8080 \
+  -e NIX_REPL_BIND=0.0.0.0 \
+  -e NIX_REPL_TOKEN=$NIX_REPL_TOKEN \
+  --cap-drop=ALL --security-opt=no-new-privileges \
+  localhost/nix-repl-service
+```
 
 - If `podman build -t nix-repl-service .` fails, try
   `podman build --no-cache -t nix-repl.service .`
 
 5.  **Serve your book:**
-    ```bash
-    mdbook serve
-    ```
+
+```bash
+mdbook serve
+```
 
 ---
 
