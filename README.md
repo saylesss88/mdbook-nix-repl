@@ -27,10 +27,17 @@ local Nix evaluation service and shows the result inline.
 
 2.  **Initialize your book:** Go to your mdBook directory and run:
 
-    ```bash
-    # Run this once if you don't already have a `theme/index.hbs` (required for injection)
-    mdbook theme
+If you don't already have a `theme/index.hbs` file (you likely do), create one
+with the following command. ⚠️ Warning: this wipes your `book.toml` and
+`.gitignore` files also, back them up first if necessary.
 
+    ```bash
+    cp book.toml book.toml.bak
+    mdbook init --theme --force
+    cp book.toml.bak book.toml
+    ```
+
+    ```bash
     # Initialize the plugin files and backend
     mdbook-nix-repl init --auto
     ```

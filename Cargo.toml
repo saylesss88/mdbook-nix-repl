@@ -1,6 +1,6 @@
 [package]
 name = "mdbook-nix-repl"
-version = "0.5.3"
+version = "0.5.4"
 edition = "2024"
 authors = ["T. Sawyer saylesss88@github.com"]
 license = "Apache-2.0"

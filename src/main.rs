@@ -14,6 +14,10 @@ const SERVER_RUST: &str = include_str!("../server/src/main.rs");
 const SERVER_CARGO_TOML: &str = include_str!("../server/Cargo.toml.inc");
 const DOCKERFILE: &str = include_str!("../server/Dockerfile");
 
+/// Command-line interface for the `mdbook-nix-repl` helper.
+///
+/// This is intended to be used both by `mdbook` (as a preprocessor)
+/// and directly by users for initial setup.
 #[derive(Parser)]
 #[command(name = "mdbook-nix-repl")]
 #[command(about = "A mdbook preprocessor for interactive Nix REPL blocks")]
@@ -25,10 +29,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Supports {
-        renderer: String,
-    },
+    /// Report whether the preprocessor supports a given renderer.
+    Supports { renderer: String },
+    /// Set up the theme JS and backend skeleton in the current project.
     Init {
+        /// If set, try to auto-detect OS and print extra hints.
         #[arg(long)]
         auto: bool,
     },
@@ -49,10 +54,13 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
         }
+        // Default mode: act as an mdBook preprocessor, reading JSON on stdin.
         None => run_preprocessor(),
     }
 }
 
+/// Run the preprocessor in the standard mdBook pipeline:
+/// read context + book from stdin, process, and write the result to stdout.
 fn run_preprocessor() -> Result<()> {
     let (ctx, book): (PreprocessorContext, Book) = parse_input(io::stdin())?;
     let pre = NixRepl;
@@ -61,6 +69,11 @@ fn run_preprocessor() -> Result<()> {
     Ok(())
 }
 
+/// Initialize the assets needed for interactive `nix repl` blocks.
+///
+/// - Writes the theme JS into `theme/`
+/// - Injects a small config snippet into `theme/index.hbs`
+/// - Creates a `nix-repl-backend` directory with a Rust server skeleton
 fn handle_init(auto: bool) -> Result<()> {
     println!("📦 Initializing mdbook-nix-repl...");
 
@@ -134,6 +147,10 @@ fn handle_init(auto: bool) -> Result<()> {
     Ok(())
 }
 
+/// Try to detect the host OS and print a minimal run guide for the backend.
+///
+/// The container recipe is meant to work everywhere; on NixOS a native run is
+/// also suggested for convenience.
 fn detect_os_and_advise(token: &str) {
     let is_nixos = fs::read_to_string("/etc/os-release")
         .map(|c| c.to_lowercase().contains("id=nixos"))
