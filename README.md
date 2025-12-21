@@ -28,9 +28,10 @@ local Nix evaluation service and shows the result inline.
 2.  **Initialize your book:** Go to your mdBook directory and run:
 
 If you don't already have a `theme/index.hbs` file (you likely do), create one
-with the following command. ⚠️ Warning: `mdbook init --theme` wipes your
-`/theme` directory, `book.toml`, and `.gitignore` files if they exist, back them
-up first if necessary.
+with the following command.
+
+⚠️ Warning: `mdbook init --theme` wipes your `/theme` directory, `book.toml`,
+and `.gitignore` files if they exist, back them up first if necessary.
 
 ```bash
 # Only run this if you don't have a `theme/index.hbs` file
