@@ -121,6 +121,11 @@ several security layers:
     token (`NIX_REPL_TOKEN`). Requests without this token are rejected (403
     Forbidden).
 
+    > 🔐 **Token Security:** The authentication token is generated using
+    > cryptographically secure random number generation (192 bits of entropy),
+    > making it computationally infeasible to guess or brute-force. Each `init`
+    > run produces a unique, unpredictable token.
+
 2.  **Localhost Only:** The server binds strictly to `127.0.0.1` on the host
     (via port mapping), preventing access from the local network or internet.
 

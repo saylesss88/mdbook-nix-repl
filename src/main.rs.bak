@@ -2,10 +2,10 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use mdbook_preprocessor::book::Book;
 use mdbook_preprocessor::{Preprocessor, PreprocessorContext, parse_input};
-use rand::RngCore;
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use mdbook_nix_repl::NixRepl;
 
@@ -69,11 +69,6 @@ fn run_preprocessor() -> Result<()> {
     Ok(())
 }
 
-fn generate_secure_token() -> String {
-    let mut bytes = [0u8; 24]; // 24 bytes = 48 hex chars
-    rand::thread_rng().fill_bytes(&mut bytes);
-    hex::encode(bytes)
-}
 /// Initialize the assets needed for interactive `nix repl` blocks.
 ///
 /// - Writes the theme JS into `theme/`
@@ -82,7 +77,12 @@ fn generate_secure_token() -> String {
 fn handle_init(auto: bool) -> Result<()> {
     println!("📦 Initializing mdbook-nix-repl...");
 
-    let token = generate_secure_token();
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let token = format!("{:x}", nanos);
+
     let theme_dir = Path::new("theme");
     if !theme_dir.exists() {
         fs::create_dir(theme_dir).context("Failed to create theme directory")?;
