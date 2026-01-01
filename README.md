@@ -25,9 +25,9 @@ local Nix evaluation service and shows the result inline.
 
 1.  **Install the tool:**
 
-    ```bash
-    cargo install mdbook-nix-repl
-    ```
+```bash
+cargo install mdbook-nix-repl
+```
 
 2.  **Initialize your book:** Go to your mdBook directory and run:
 
@@ -98,6 +98,38 @@ mdbook serve
 
 ---
 
+<details>
+<summary> ✔️ Custom endpoints </summary>
+
+If you need an endpoint other than the default `http://localhost:8080/`, set it
+in `book.toml` before running `mdbook-nix-repl init --auto`. ​
+
+Example `book.toml`:
+
+```toml
+[preprocessor.nix-repl]
+# ...snip...
+endpoint = "http://localhost:9999/" # trailing "/" optional
+```
+
+This value gets injected into `theme/index.hbs`, so the frontend will call
+whatever host/port you configure here.
+
+If you change the host port (like `9999`), make sure your container publish rule
+matches it, e.g. `podman run --rm -p 127.0.0.1:9999:8080 ...` (host port `9999`
+forwarded to container port `8080`). ​
+
+If you update endpoint later, rerun `mdbook-nix-repl` init to re-inject the
+updated value into the theme.
+
+The podman `echo`s should adjust to your chosen custom endpoint and suggest the
+correct `podman run` command. You can always double check by looking at what was
+injected into the `theme/index.hbs`.
+
+</details>
+
+---
+
 ## Usage in Markdown
 
 Use fenced blocks tagged as `nix repl`:
@@ -116,6 +148,9 @@ Use fenced blocks tagged as `nix repl`:
 
 The preprocessor rewrites these into interactive blocks with a “Run” button and
 an output area.
+
+The parser picks up `---nix repl` blocks that are indented, and blocks with more
+than three tics (```)
 
 ---
 
