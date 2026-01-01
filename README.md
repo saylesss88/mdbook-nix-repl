@@ -17,6 +17,10 @@ local Nix evaluation service and shows the result inline.
 
 ---
 
+> 📦 **Version Check**: The preprocessor validates mdBook compatibility at
+> runtime and will warn if there's a version mismatch. This helps catch
+> potential API incompatibilities early.
+
 ## Quick Start
 
 1.  **Install the tool:**
@@ -55,6 +59,9 @@ command = "mdbook-nix-repl"
 
 [output.html]
 additional-js = ["theme/nix_http.js"]
+
+# Optional override default endpoint
+# endpoint = "http://localhost:9000"
 ```
 
 4.  **Run the backend:** The `init` command output provided the token you need.

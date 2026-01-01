@@ -1,30 +1,51 @@
 use mdbook_preprocessor::book::{Book, BookItem};
 use mdbook_preprocessor::errors::Error;
 use mdbook_preprocessor::{Preprocessor, PreprocessorContext};
+use serde::Deserialize;
 
 /// Preprocessor that rewrites fenced `nix repl` code blocks into
 /// interactive HTML fragments for use in the rendered book.
 pub struct NixRepl;
 
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct NixReplConfig {
+    endpoint: Option<String>,
+    // Add other config options here as needed
+}
+
 impl Preprocessor for NixRepl {
-    /// Name used to enable this preprocessor in `book.toml`.
     fn name(&self) -> &str {
         "nix-repl"
     }
 
-    /// Walk the book and rewrite chapter content, transforming any
-    /// ` ```
-    fn run(&self, _ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
+    fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
+        // Read config from book.toml [preprocessor.nix-repl]
+        let config: NixReplConfig = ctx
+            .config
+            .get("preprocessor.nix-repl")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+
+        // Log what we found
+        match &config.endpoint {
+            Some(endpoint) => {
+                eprintln!("✅ [nix-repl] Using custom endpoint: {}", endpoint);
+            }
+            None => {
+                eprintln!("ℹ️  [nix-repl] No custom endpoint configured, using default");
+            }
+        }
+
         book.for_each_mut(|item| {
             if let BookItem::Chapter(ref mut ch) = *item {
-                ch.content = rewrite_chapter(&ch.content);
+                ch.content = rewrite_chapter(&ch.content); // ✅ No extra argument
             }
         });
         Ok(book)
     }
 
-    /// Only enable this preprocessor for the HTML renderer, since it
-    /// emits raw HTML markup.
     fn supports_renderer(&self, renderer: &str) -> Result<bool, Error> {
         Ok(renderer == "html")
     }
@@ -46,40 +67,83 @@ fn rewrite_chapter(input: &str) -> String {
 /// ```
 /// ```
 fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
-    const START: &str = "```nix repl";
-    const END: &str = "```";
-
     let mut out = String::new();
     let mut in_block = false;
     let mut buf = String::new();
+    let mut fence_char = '`';
+    let mut fence_count = 0;
 
     for line in input.lines() {
-        let trimmed = line.trim_start();
-
         if !in_block {
-            if trimmed.starts_with(START) {
+            // Check for opening fence (at least 3 backticks/tildes at start)
+            if let Some(fence_info) = detect_fence_start(line)
+                && fence_info.info_string.starts_with("nix repl")
+            {
                 in_block = true;
+                fence_char = fence_info.char;
+                fence_count = fence_info.count;
                 buf.clear();
-            } else {
-                out.push_str(line);
-                out.push('\n');
+                continue;
             }
-        } else if trimmed.starts_with(END) {
-            out.push_str(&render_nix_repl_html(&buf));
-            in_block = false;
+            out.push_str(line);
+            out.push('\n');
         } else {
-            buf.push_str(line);
-            buf.push('\n');
+            // Check for closing fence (same char, >= opening count)
+            if is_closing_fence(line, fence_char, fence_count) {
+                out.push_str(&render_nix_repl_html(&buf));
+                in_block = false;
+            } else {
+                buf.push_str(line);
+                buf.push('\n');
+            }
         }
     }
 
-    // If the input ends while still inside a fenced block, just emit the
-    // raw contents rather than dropping them.
     if in_block {
         out.push_str(&buf);
     }
-
     out
+}
+
+struct FenceInfo {
+    char: char,
+    count: usize,
+    info_string: String,
+}
+
+fn detect_fence_start(line: &str) -> Option<FenceInfo> {
+    let trimmed = line.trim_start();
+    if trimmed.len() < 3 {
+        return None;
+    }
+
+    let first_char = trimmed.chars().next()?;
+    if first_char != '`' && first_char != '~' {
+        return None;
+    }
+
+    let count = trimmed.chars().take_while(|&c| c == first_char).count();
+    if count < 3 {
+        return None;
+    }
+
+    let info_string = trimmed[count..].trim().to_string();
+
+    Some(FenceInfo {
+        char: first_char,
+        count,
+        info_string,
+    })
+}
+
+fn is_closing_fence(line: &str, fence_char: char, min_count: usize) -> bool {
+    let trimmed = line.trim();
+    if !trimmed.starts_with(fence_char) {
+        return false;
+    }
+
+    let count = trimmed.chars().take_while(|&c| c == fence_char).count();
+    count >= min_count && trimmed[count..].trim().is_empty()
 }
 
 /// Render the captured `nix repl` code as an interactive HTML widget.
