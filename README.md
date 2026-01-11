@@ -268,6 +268,82 @@ Running the native server under a separate, minimally privileged user account
 (with limited home access and no sensitive credentials) reduces the impact if
 something goes wrong.
 
+### Option C: NixOS Module (Recommended for NixOS Users)
+
+In NixOS, everything defined in your configuration is built into the
+world-readable `/nix/store`. If you set `NIX_REPL_TOKEN="my-secret"` directly in
+your Nix config, any user on the system could read it by inspecting the store
+path.
+
+Instead, this setup uses the `environmentFiles` option in the container module.
+This tells systemd to load the token at runtime from `/etc/nix-repl-server.env`,
+a standard file restricted to root (mode 600). The token exists only in that
+protected file and the running process's memory, never in the Nix store.
+
+I've added a `flake.nix` to the `mdbook-nix-repl` repo, you can add it as a
+flake input:
+
+1. `flake.nix`:
+
+```nix
+# flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
+    mdbook-nix-repl.url = "github:yourname/mdbook-nix-repl?dir=server";
+  };
+
+  outputs = { self, nixpkgs, mdbook-nix-repl, ... }: {
+    nixosConfigurations.magic = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./configuration.nix
+
+        mdbook-nix-repl.nixosModules.default
+      ];
+    };
+  };
+}
+```
+
+2. `configuration.nix`:
+
+```nix
+{ pkgs, ... }:
+{
+  imports = [
+  ];
+
+  # This option is now provided by the module you imported from the flake
+  custom.nix-repl-server = {
+    enable = true;
+    port = 8080;
+    tokenFile = "/etc/nix-repl-server.env";
+  };
+}
+```
+
+3. Copy the value of `NIX_REPL_TOKEN` in `theme/index.hbs`, and add create file
+   `/etc/nix-repl-server.env`:
+
+```bash
+# Create the file with strict permissions (root read-only)
+sudo touch /etc/nix-repl-server.env
+sudo chmod 600 /etc/nix-repl-server.env
+
+# Edit it to add: NIX_REPL_TOKEN=your_token_from_index_hbs
+sudo vim /etc/nix-repl-server.env
+```
+
+Expected format:
+
+```text
+NIX_REPL_TOKEN=9deb7efadb74b9e962e7911bb5caf3b3fef275a1b915b526
+```
+
+4. Rebuild, and the server will now be running at boot.
+
 ---
 
 ## Protocol
