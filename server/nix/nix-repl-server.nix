@@ -38,7 +38,6 @@ in
   options.custom.nix-repl-server = {
     enable = lib.mkEnableOption "nix-repl-server container";
 
-    # Add this option so the Flake can pass the package in
     package = lib.mkOption {
       type = lib.types.package;
       description = "The nix-repl-server package to use.";
