@@ -1,5 +1,7 @@
 # mdbook-nix-repl
 
+[![Flake](https://img.shields.io/badge/Nix-Flake-bright_purple?logo=nixos)](https://flakehub.com/f/saylesss88/mdbook-nix-repl)
+
 Interactive Nix REPL–style code blocks for mdBook.
 
 ![mdbook-repl](https://raw.githubusercontent.com/saylesss88/mdbook-nix-repl/main/assets/mdbook-nix-repl1.png)
