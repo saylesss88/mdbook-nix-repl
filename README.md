@@ -295,7 +295,7 @@ flake input:
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    mdbook-nix-repl.url = "github:yourname/mdbook-nix-repl?dir=server";
+    mdbook-nix-repl.url = "github:saylesss88/mdbook-nix-repl?dir=server";
   };
 
   outputs = { self, nixpkgs, mdbook-nix-repl, ... }: {
