@@ -15,7 +15,7 @@ struct NixReplConfig {
 }
 
 impl Preprocessor for NixRepl {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "nix-repl"
     }
 
@@ -31,7 +31,7 @@ impl Preprocessor for NixRepl {
         // Log what we found
         match &config.endpoint {
             Some(endpoint) => {
-                eprintln!("✅ [nix-repl] Using custom endpoint: {}", endpoint);
+                eprintln!("✅ [nix-repl] Using custom endpoint: {endpoint}");
             }
             None => {
                 eprintln!("ℹ️  [nix-repl] No custom endpoint configured, using default");
@@ -74,7 +74,16 @@ fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
     let mut fence_count = 0;
 
     for line in input.lines() {
-        if !in_block {
+        if in_block {
+            // Check for closing fence (same char, >= opening count)
+            if is_closing_fence(line, fence_char, fence_count) {
+                out.push_str(&render_nix_repl_html(&buf));
+                in_block = false;
+            } else {
+                buf.push_str(line);
+                buf.push('\n');
+            }
+        } else {
             // Check for opening fence (at least 3 backticks/tildes at start)
             if let Some(fence_info) = detect_fence_start(line)
                 && fence_info.info_string.starts_with("nix repl")
@@ -87,15 +96,6 @@ fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
             }
             out.push_str(line);
             out.push('\n');
-        } else {
-            // Check for closing fence (same char, >= opening count)
-            if is_closing_fence(line, fence_char, fence_count) {
-                out.push_str(&render_nix_repl_html(&buf));
-                in_block = false;
-            } else {
-                buf.push_str(line);
-                buf.push('\n');
-            }
         }
     }
 

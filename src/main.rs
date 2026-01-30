@@ -141,13 +141,8 @@ fn handle_init(auto: bool) -> Result<()> {
 
     // 2. Inject/Update configuration in index.hbs
     let index_path = theme_dir.join("index.hbs");
-    let (endpoint, token) = if !index_path.exists() {
-        println!("⚠️  theme/index.hbs not found. Run `mdbook theme` first.");
-        (
-            "http://127.0.0.1:8080/".to_string(),
-            generate_secure_token(),
-        )
-    } else {
+
+    let (endpoint, token) = if index_path.exists() {
         let content = fs::read_to_string(&index_path)?;
 
         let mut endpoint =
@@ -160,19 +155,18 @@ fn handle_init(auto: bool) -> Result<()> {
 
         let snippet = format!(
             r#"
-<!-- mdbook-nix-repl config -->
-<script>
-  window.NIX_REPL_ENDPOINT = "{endpoint}";
-  window.NIX_REPL_TOKEN = "{token}";
-</script>
-"#
+     <!-- mdbook-nix-repl config -->
+     <script>
+       window.NIX_REPL_ENDPOINT = "{endpoint}";
+       window.NIX_REPL_TOKEN = "{token}";
+     </script>
+     "#
         );
 
         let new_content = if let Some(start) = content.find("<!-- mdbook-nix-repl config -->") {
             let end = content[start..]
                 .find("</script>")
-                .map(|i| start + i + "</script>".len())
-                .unwrap_or(content.len());
+                .map_or(content.len(), |i| start + i + "</script>".len());
 
             let mut s = content;
             s.replace_range(start..end, snippet.trim_matches('\n'));
@@ -185,6 +179,12 @@ fn handle_init(auto: bool) -> Result<()> {
         println!("✅ Updated mdbook-nix-repl config in theme/index.hbs");
 
         (endpoint, token)
+    } else {
+        println!("⚠️  theme/index.hbs not found. Run `mdbook theme` first.");
+        (
+            "http://127.0.0.1:8080/".to_string(),
+            generate_secure_token(),
+        )
     };
 
     // 3. Write Backend Files
@@ -231,13 +231,13 @@ fn detect_os_and_advise(token: &str, endpoint: &str) {
     println!("   3. Run the container:");
     println!("      $ podman run --rm -p 127.0.0.1:{port}:8080 \\");
     println!("         -e NIX_REPL_BIND=0.0.0.0 \\");
-    println!("         -e NIX_REPL_TOKEN={} \\", token);
+    println!("         -e NIX_REPL_TOKEN={token} \\");
     println!("         --cap-drop=ALL --security-opt=no-new-privileges \\");
     println!("         nix-repl-service");
 
     if is_nixos {
         println!("\n   🎉 NixOS detected! You can also run natively:");
-        println!("      $ export NIX_REPL_TOKEN={}", token);
+        println!("      $ export NIX_REPL_TOKEN={token}");
         println!("      $ cd nix-repl-backend");
         // Native run uses the default 127.0.0.1 bind (secure by default)
         println!("      $ cargo run --release");
@@ -246,5 +246,5 @@ fn detect_os_and_advise(token: &str, endpoint: &str) {
     }
 
     println!("\n🔒 Security: Token saved to theme/index.hbs");
-    println!("   Keep NIX_REPL_TOKEN={} private!", token);
+    println!("   Keep NIX_REPL_TOKEN={token} private!");
 }
