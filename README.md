@@ -38,8 +38,9 @@ cargo install mdbook-nix-repl
 If you don't already have a `theme/index.hbs` file (you likely do), create one
 with the following command.
 
-⚠️ Warning: `mdbook init --theme` wipes your `/theme` directory, `book.toml`,
-and `.gitignore` files if they exist, back them up first if necessary.
+⚠️ Warning: `mdbook init --theme` wipes some files in your `/theme` directory,
+your `book.toml`, and `.gitignore` files if they exist, back them up first if
+necessary.
 
 ```bash
 # Only run this if you don't have a `theme/index.hbs` file
