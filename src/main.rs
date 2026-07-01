@@ -80,11 +80,11 @@ fn run_preprocessor() -> Result<()> {
 }
 
 fn generate_secure_token() -> String {
-    use rand::TryRngCore;
-    use rand::rngs::OsRng;
+    use rand::TryRng;
+    use rand::rngs::SysRng;
 
     let mut bytes = [0u8; 24]; // paranoid setup use 32 bytes = 256 bits
-    OsRng
+    SysRng
         .try_fill_bytes(&mut bytes)
         .expect("OS RNG unavailable");
     hex::encode(bytes)
