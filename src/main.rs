@@ -217,9 +217,8 @@ fn handle_init(auto: bool) -> Result<()> {
 /// also suggested for convenience.
 fn detect_os_and_advise(token: &str, endpoint: &str) {
     let _ = endpoint;
-    let is_nixos = fs::read_to_string("/etc/os-release")
-        .map(|c| c.to_lowercase().contains("id=nixos"))
-        .unwrap_or(false);
+    let is_nixos =
+        fs::read_to_string("/etc/os-release").is_ok_and(|c| c.to_lowercase().contains("id=nixos"));
     let port = endpoint_port(endpoint).unwrap_or(8080);
 
     println!("\n🔍 System Detection:");
