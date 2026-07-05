@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 use mdbook_preprocessor::book::{Book, BookItem};
 use mdbook_preprocessor::errors::Error;
 use mdbook_preprocessor::{Preprocessor, PreprocessorContext};
@@ -7,18 +8,21 @@ use serde::Deserialize;
 /// interactive HTML fragments for use in the rendered book.
 pub struct NixRepl;
 
+/// Configuration options for the `nix-repl` preprocessor parsed from `book.toml`.
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 struct NixReplConfig {
+    /// Optional URL or path to a custom Nix REPL endpoint.
     endpoint: Option<String>,
-    // Add other config options here as needed
 }
 
 impl Preprocessor for NixRepl {
+    /// Returns the unique identifier for this preprocessor.
     fn name(&self) -> &'static str {
         "nix-repl"
     }
 
+    /// Runs the preprocessor, scanning and modifying chapter content to evaluate Nix code blocks.
     fn run(&self, ctx: &PreprocessorContext, mut book: Book) -> Result<Book, Error> {
         // Read config from book.toml [preprocessor.nix-repl]
         let config: NixReplConfig = ctx
@@ -40,12 +44,13 @@ impl Preprocessor for NixRepl {
 
         book.for_each_mut(|item| {
             if let BookItem::Chapter(ref mut ch) = *item {
-                ch.content = rewrite_chapter(&ch.content); // ✅ No extra argument
+                ch.content = rewrite_chapter(&ch.content);
             }
         });
         Ok(book)
     }
 
+    /// Restricts this preprocessor to the HTML renderer.
     fn supports_renderer(&self, renderer: &str) -> Result<bool, Error> {
         Ok(renderer == "html")
     }
@@ -56,6 +61,7 @@ fn rewrite_chapter(input: &str) -> String {
     rewrite_fenced_nix_repl_blocks(input)
 }
 
+#[allow(rustdoc::private_doc_tests)]
 /// Scan the chapter for fenced `nix repl` code blocks and replace them
 /// with the corresponding interactive HTML widget.
 ///
@@ -105,12 +111,27 @@ fn rewrite_fenced_nix_repl_blocks(input: &str) -> String {
     out
 }
 
-struct FenceInfo {
-    char: char,
-    count: usize,
-    info_string: String,
+/// Represents the parsed metadata of an opening code block fence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FenceInfo {
+    /// The character used to construct the fence.
+    pub char: char,
+    /// The number of consecutive fence characters detected.
+    pub count: usize,
+    /// The raw syntax or language identifier following the fence, stripped of leading/trailing whitespace.
+    pub info_string: String,
 }
 
+/// Detects if a line is the start of a markdown-style code block fence and extracts its metadata.
+///
+/// A valid opening fence consists of at least 3 consecutive backticks (```` ` ````) or tildes (`~`),
+/// optionally preceded by leading whitespace. Any text remaining on the line after the fence
+/// characters is extracted as the info string (e.g., the language identifier).
+///
+/// # Returns
+///
+/// * `Some(FenceInfo)` containing the fence character, total count, and trimmed info string if successful.
+/// * `None` if the line does not start with a valid fence sequence of at least 3 characters.
 fn detect_fence_start(line: &str) -> Option<FenceInfo> {
     let trimmed = line.trim_start();
     if trimmed.len() < 3 {
@@ -136,6 +157,11 @@ fn detect_fence_start(line: &str) -> Option<FenceInfo> {
     })
 }
 
+/// Checks if a line is a valid closing markdown-style code block fence.
+///
+/// A line is considered a valid closing fence if it consists entirely of a repeating
+/// `fence_char` (with a count of at least `min_count`), allowing for optional leading
+/// and trailing whitespace.
 fn is_closing_fence(line: &str, fence_char: char, min_count: usize) -> bool {
     let trimmed = line.trim();
     if !trimmed.starts_with(fence_char) {
