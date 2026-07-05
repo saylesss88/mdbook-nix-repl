@@ -109,7 +109,6 @@ async fn auth_middleware(
             .unwrap_or("");
 
         if auth_header != expected.as_str() {
-            eprintln!("DEBUG: Expected='{}' Received='{}'", expected, auth_header);
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ErrorResponse {

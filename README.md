@@ -10,11 +10,9 @@ Interactive Nix REPL–style code blocks for mdBook.
 
 This preprocessor lets you write fenced blocks like:
 
-````
 ```nix repl
 1 + 1
 ```
-````
 
 In the rendered book you get a “Run” button that sends the code to a secure
 local Nix evaluation service and shows the result inline.
