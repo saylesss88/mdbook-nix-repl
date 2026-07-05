@@ -360,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "mdbook-nix-repl"
-version = "0.6.8"
+version = "0.6.9"
 dependencies = [
  "anyhow",
  "clap",

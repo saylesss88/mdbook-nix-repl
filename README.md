@@ -153,7 +153,7 @@ The preprocessor rewrites these into interactive blocks with a “Run” button 
 an output area.
 
 The parser picks up `---nix repl` blocks that are indented, and blocks with more
-than three tics (```)
+than three tics `(```)`
 
 ---
 
